@@ -27,7 +27,7 @@ namespace dialingrecords.Functions.Functions
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             Marking marking = JsonConvert.DeserializeObject<Marking>(requestBody);
 
-            if (string.IsNullOrEmpty(marking?.Date.ToString()))
+            if (string.IsNullOrEmpty(marking?.Type.ToString()))
             {
                 return new BadRequestObjectResult(new Response
                 {
@@ -36,12 +36,24 @@ namespace dialingrecords.Functions.Functions
                 });
             }
 
+            TableQuery<MarkingEntity> query = new TableQuery<MarkingEntity>();
+            TableQuerySegment<MarkingEntity> markings = await markingTable.ExecuteQuerySegmentedAsync(query, null);
+
+            bool existMarking = false;
+            foreach (var item in markings)
+            {
+                if (item.IdEmployee == marking.IdEmployee && !item.Consolidated)
+                {
+                    existMarking = true;
+                }
+            }
+
             MarkingEntity markingEntity = new MarkingEntity
             {
                 IdEmployee = marking.IdEmployee,
                 Date = DateTime.UtcNow,
                 ETag = "*",
-                Type = 1,
+                Type = existMarking ? 1 : 0,
                 PartitionKey = "MARKING",
                 RowKey = Guid.NewGuid().ToString(),
                 Consolidated = false
@@ -89,9 +101,10 @@ namespace dialingrecords.Functions.Functions
             // Update marking
             MarkingEntity markingEntity = (MarkingEntity)findResult.Result;
             markingEntity.Consolidated = marking.Consolidated;
-            if (!string.IsNullOrEmpty(marking.Date.ToString()))
+            if (!string.IsNullOrEmpty(marking.Type.ToString()))
             {
                 markingEntity.Date = marking.Date;
+                markingEntity.Type = marking.Type;
             }
 
             TableOperation addOperation = TableOperation.Replace(markingEntity);
