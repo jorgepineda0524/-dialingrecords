@@ -26,7 +26,7 @@ namespace dialingrecords.Functions.Functions
             List<MarkingEntity> orderMarkings = completedMarkings.Results.OrderBy(e => e.IdEmployee).ThenBy(d => d.Date).ToList();
 
             double consolidatedTime;
-            for (int i = 0; i < orderMarkings.Count(); i++)
+            for (int i = 0; i < orderMarkings.Count() - 1; i++)
             {
                 if (orderMarkings[i + 1].IdEmployee == orderMarkings[i].IdEmployee)
                 {
@@ -71,7 +71,6 @@ namespace dialingrecords.Functions.Functions
 
                     i = i + 2;
                 }
-
             }
 
             log.LogInformation($"Recieved consolidated employees: {DateTime.Now}");
