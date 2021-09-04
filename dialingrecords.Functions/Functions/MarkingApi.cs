@@ -24,69 +24,61 @@ namespace dialingrecords.Functions.Functions
             [Table("marking", Connection = "AzureWebJobsStorage")] CloudTable markingTable,
             ILogger log)
         {
-            try
+            log.LogInformation("Recivied a new marking");
+
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            Marking marking = JsonConvert.DeserializeObject<Marking>(requestBody);
+
+            if (string.IsNullOrEmpty(marking?.Type.ToString()))
             {
-                log.LogInformation("Recivied a new marking");
-
-                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-                Marking marking = JsonConvert.DeserializeObject<Marking>(requestBody);
-
-                if (string.IsNullOrEmpty(marking?.Type.ToString()))
+                return new BadRequestObjectResult(new Response
                 {
-                    return new BadRequestObjectResult(new Response
-                    {
-                        IsSuccess = false,
-                        Message = "The request must have a Date marking."
-                    });
-                }
-
-                TableQuery<MarkingEntity> query = new TableQuery<MarkingEntity>();
-                TableQuerySegment<MarkingEntity> markings = await markingTable.ExecuteQuerySegmentedAsync(query, null);
-                List<MarkingEntity> lastMarkingEntity = markings.Results.OrderBy(e => e.IdEmployee).ThenBy(d => d.Date).ToList();
-
-                bool markExit = false;
-                foreach (var item in lastMarkingEntity)
-                {
-                    if (item.IdEmployee == marking.IdEmployee && !item.Consolidated && item.Type == 0)
-                    {
-                        markExit = true;
-                    }
-                    else
-                    {
-                        markExit = false;
-                    }
-                }
-
-                MarkingEntity markingEntity = new MarkingEntity
-                {
-                    IdEmployee = marking.IdEmployee,
-                    Date = DateTime.UtcNow,
-                    ETag = "*",
-                    Type = markExit ? 1 : 0,
-                    PartitionKey = "MARKING",
-                    RowKey = Guid.NewGuid().ToString(),
-                    Consolidated = false
-                };
-
-                TableOperation addOperation = TableOperation.Insert(markingEntity);
-                await markingTable.ExecuteAsync(addOperation);
-
-                string message = "New marking stored in table";
-                log.LogInformation(message);
-
-                return new OkObjectResult(new Response
-                {
-                    IsSuccess = true,
-                    Message = message,
-                    Result = markingEntity
+                    IsSuccess = false,
+                    Message = "The request must have a Date marking."
                 });
             }
-            catch (Exception ex)
-            {
 
-                throw;
+            string filter = TableQuery.GenerateFilterConditionForBool("Consolidated", QueryComparisons.Equal, false);
+            TableQuery<MarkingEntity> query = new TableQuery<MarkingEntity>().Where(filter);
+            TableQuerySegment<MarkingEntity> markings = await markingTable.ExecuteQuerySegmentedAsync(query, null);
+            List<MarkingEntity> orderMarkingEntity = markings.Results.OrderBy(e => e.IdEmployee).ThenBy(d => d.Date).ToList();
+
+            bool markExit = false;
+            foreach (var item in orderMarkingEntity)
+            {
+                if (item.IdEmployee == marking.IdEmployee && !item.Consolidated && item.Type == 0)
+                {
+                    markExit = true;
+                }
+                else
+                {
+                    markExit = false;
+                }
             }
 
+            MarkingEntity markingEntity = new MarkingEntity
+            {
+                IdEmployee = marking.IdEmployee,
+                Date = DateTime.UtcNow,
+                ETag = "*",
+                Type = markExit ? 1 : 0,
+                PartitionKey = "MARKING",
+                RowKey = Guid.NewGuid().ToString(),
+                Consolidated = false
+            };
+
+            TableOperation addOperation = TableOperation.Insert(markingEntity);
+            await markingTable.ExecuteAsync(addOperation);
+
+            string message = "New marking stored in table";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = markingEntity
+            });
         }
 
         [FunctionName(nameof(UpdateMarking))]
@@ -117,11 +109,7 @@ namespace dialingrecords.Functions.Functions
             // Update marking
             MarkingEntity markingEntity = (MarkingEntity)findResult.Result;
             markingEntity.Consolidated = marking.Consolidated;
-            if (!string.IsNullOrEmpty(marking.Type.ToString()))
-            {
-                markingEntity.Date = marking.Date;
-                markingEntity.Type = marking.Type;
-            }
+            markingEntity.Type = marking.Type;
 
             TableOperation addOperation = TableOperation.Replace(markingEntity);
             await markingTable.ExecuteAsync(addOperation);
