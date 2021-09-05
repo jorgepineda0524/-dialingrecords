@@ -69,7 +69,7 @@ namespace dialingrecords.Tests.Tests
         public void GetMarkingById_Should_Return_MarkingEntity()
         {
             // Arrenge cuando se prepara
-            MockMarkingEntity mockMarkings = new MockMarkingEntity(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"), null);
+            MockCloudTableMarking mockMarkings = new MockCloudTableMarking(new Uri("http://127.0.0.1:10002/devstoreaccount1/reports"), null);
             MarkingEntity markingRequest2 = TestFactory.GetMarkingEntity();
             Marking markingRequest = TestFactory.GetMarkingRequest();
             string markingId = Guid.NewGuid().ToString();

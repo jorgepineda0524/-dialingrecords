@@ -8,17 +8,17 @@ using System.Threading.Tasks;
 
 namespace dialingrecords.Tests.Helpers
 {
-    public class MockMarkingEntity : CloudTable
+    public class MockConsolidatedMarkingEntity : CloudTable
     {
-        public MockMarkingEntity(Uri tableAddress) : base(tableAddress)
+        public MockConsolidatedMarkingEntity(Uri tableAddress) : base(tableAddress)
         {
         }
 
-        public MockMarkingEntity(Uri tableAbsoluteUri, StorageCredentials credentials) : base(tableAbsoluteUri, credentials)
+        public MockConsolidatedMarkingEntity(Uri tableAbsoluteUri, StorageCredentials credentials) : base(tableAbsoluteUri, credentials)
         {
         }
 
-        public MockMarkingEntity(StorageUri tableAddress, StorageCredentials credentials) : base(tableAddress, credentials)
+        public MockConsolidatedMarkingEntity(StorageUri tableAddress, StorageCredentials credentials) : base(tableAddress, credentials)
         {
         }
 
